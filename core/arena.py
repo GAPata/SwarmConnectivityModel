@@ -114,9 +114,12 @@ class Arena:
         dist  = np.linalg.norm(delta, axis=2)   # (N, N)
         np.fill_diagonal(dist, np.inf)           # self-distance → ∞ so it contributes 0
 
-        # Unit vectors: toward neighbour (0 on diagonal because [0,0]/∞)
-        unit_toward = delta / dist[:, :, np.newaxis]
-        unit_away   = -unit_toward
+        # Unit vectors: toward neighbour. 0/inf → 0 on diagonal; 0/0 (collocated
+        # robots) → NaN, which propagates to force_norm and makes valid=False,
+        # correctly triggering the random-heading fallback below.
+        with np.errstate(divide="ignore", invalid="ignore"):
+            unit_toward = delta / dist[:, :, np.newaxis]
+        unit_away = -unit_toward
 
         d_capped = np.maximum(dist, d_min)       # cap for force magnitude; diagonal stays ∞
 

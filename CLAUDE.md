@@ -11,10 +11,10 @@ stima locale di concentrazione spaziale (chi), diffusione SI.
 - `core/swarm.py` — inizializzazione posizioni (uniform, gaussian)
 - `core/graph.py` — costruzione RGG con cKDTree
 - `metrics/chi.py` — chi_true (globale) e chi_hat (stima locale per robot)
-- `simulation/runner.py` — SimRunner, classe principale che esegue un run
+- `simulations/runner.py` — SimRunner, classe principale che esegue un run
 - `data/logger.py` — SimLogger, raccoglie dati per timestep
-- `visualization/plots.py` — plot_chi_tracking, plot_SI_curve
-- `visualization/snapshot.py` — plot_snapshot, make_gif
+- `visualizations/plots.py` — plot_chi_tracking, plot_SI_curve
+- `visualizations/snapshot.py` — plot_snapshot, make_gif
 - `experiments/experiment.py` — Experiment, multi-run con seed progressivi
 - `experiments/postprocess.py` — aggregazione su più run
 

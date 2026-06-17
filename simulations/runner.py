@@ -31,11 +31,12 @@ class SimRunner:
     beta          : transmission probability per contact (reserved; currently
                     deterministic β=1 is used regardless of this value).
     mobility_mode : 'random_walk' — isotropic fixed-step random walk (default).
-                    'aggregation' — each robot moves toward its neighbours' CoM.
+                    'aggregation' — global 1/d² attraction + short-range
+                    repulsion (no RGG). Tuned by agg_d_min, agg_R_personal,
+                    agg_W_attract, agg_W_repel, agg_noise.
                     'flocking' — Reynolds flocking on a toroidal arena (see
-                    Arena.flocking_step). R_sep/R_ali/R_coh, W_sep/W_ali/W_coh,
-                    flock_noise, dt, max_force and min_speed tune it and are
-                    ignored for the other mobility modes.
+                    Arena.flocking_step). Tuned by R_sep/R_ali/R_coh,
+                    W_sep/W_ali/W_coh, flock_noise, dt, max_force, min_speed.
     """
 
     _MOBILITY_MODES = {"random_walk", "aggregation", "flocking"}

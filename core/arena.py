@@ -71,55 +71,78 @@ class Arena:
     def aggregation_step(
         self,
         positions: np.ndarray,
-        k_i: np.ndarray,
-        G,
         step_size: float,
+        d_min: float = 0.3,
+        R_personal: float = 0.5,
+        W_attract: float = 1.0,
+        W_repel: float = 2.0,
         noise: float = 0.05,
     ) -> np.ndarray:
-        """One aggregation move: each robot steps toward its neighbours' centre of mass.
+        """One aggregation move driven by global pairwise forces (no RGG/k_i).
 
-        Robots with no neighbours draw a random heading instead.
-        A small isotropic Gaussian noise is added to prevent full collapse.
-        Reflective boundaries are applied at the end.
+        Each robot feels:
+          Attraction  — 1/d²-weighted pull toward every other robot, capped at
+                        d_min to avoid divergence at very short range.
+          Repulsion   — 1/d-weighted push away from robots closer than R_personal,
+                        to prevent total collapse.
+
+        The net force direction is normalised and the robot moves exactly
+        step_size in that direction (no inertia, same convention as
+        random_walk_step). If the net force is negligible the robot picks a
+        random heading. Gaussian noise and reflective boundaries are applied
+        at the end.
 
         Parameters
         ----------
-        positions : (N, 2) array of current robot positions.
-        k_i       : (N,)  per-robot degree (used to detect isolated robots).
-        G         : networkx.Graph — RGG at the current timestep.
-        step_size : fixed displacement magnitude toward the local CoM.
-        noise     : std-dev of the additive Gaussian perturbation.
+        positions  : (N, 2) array of current robot positions.
+        step_size  : fixed displacement magnitude per step.
+        d_min      : minimum effective distance for the attractive weight
+                     (cutoff below which 1/d² does not grow further).
+        R_personal : robots closer than this trigger a repulsive force.
+        W_attract  : global weight of the attractive force.
+        W_repel    : global weight of the repulsive force.
+        noise      : std-dev of the additive Gaussian perturbation.
 
         Returns
         -------
         new_positions : (N, 2) array, reflected into [0, L]^2.
         """
         N = len(positions)
+
+        # Pairwise displacement delta[i,j] = pos_j - pos_i  (N, N, 2)
+        delta = positions[np.newaxis, :, :] - positions[:, np.newaxis, :]
+        dist  = np.linalg.norm(delta, axis=2)   # (N, N)
+        np.fill_diagonal(dist, np.inf)           # self-distance → ∞ so it contributes 0
+
+        # Unit vectors: toward neighbour (0 on diagonal because [0,0]/∞)
+        unit_toward = delta / dist[:, :, np.newaxis]
+        unit_away   = -unit_toward
+
+        d_capped = np.maximum(dist, d_min)       # cap for force magnitude; diagonal stays ∞
+
+        # Attractive force: ∑_j  (1/d_capped²) * unit_toward[i,j]
+        attract_weights = 1.0 / d_capped ** 2   # diagonal → 0  (1/∞²)
+        attract_force = (unit_toward * attract_weights[:, :, np.newaxis]).sum(axis=1)
+
+        # Repulsive force: ∑_{j: d<R_personal}  (1/d_capped) * unit_away[i,j]
+        rep_weights = np.where(dist < R_personal, 1.0 / d_capped, 0.0)
+        repel_force = (unit_away * rep_weights[:, :, np.newaxis]).sum(axis=1)
+
+        force      = W_attract * attract_force + W_repel * repel_force  # (N, 2)
+        force_norm = np.linalg.norm(force, axis=1)                       # (N,)
+
+        # Normalise to step_size; random heading where force is negligible
         displacement = np.empty((N, 2))
+        valid = force_norm > 1e-10
+        displacement[valid]  = step_size * force[valid] / force_norm[valid, np.newaxis]
 
-        isolated = k_i == 0
-
-        # --- Robots with neighbours: step toward local centre of mass ---
-        for i in np.where(~isolated)[0]:
-            neighbours = list(G.neighbors(int(i)))
-            com = positions[neighbours].mean(axis=0)
-            direction = com - positions[i]
-            dist = np.linalg.norm(direction)
-            if dist > 0:
-                displacement[i] = step_size * direction / dist
-            else:
-                # Already at the CoM — random nudge
-                theta = self.rng.uniform(0.0, 2.0 * np.pi)
-                displacement[i] = step_size * np.array([np.cos(theta), np.sin(theta)])
-
-        # --- Isolated robots: random direction ---
-        if isolated.any():
-            theta = self.rng.uniform(0.0, 2.0 * np.pi, size=int(isolated.sum()))
-            displacement[isolated] = step_size * np.column_stack(
+        n_rand = int((~valid).sum())
+        if n_rand:
+            theta = self.rng.uniform(0.0, 2.0 * np.pi, size=n_rand)
+            displacement[~valid] = step_size * np.column_stack(
                 (np.cos(theta), np.sin(theta))
             )
 
-        # --- Gaussian noise to prevent full collapse ---
         displacement += self.rng.normal(scale=noise, size=(N, 2))
 
         return self._reflect(positions + displacement)

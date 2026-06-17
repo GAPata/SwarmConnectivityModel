@@ -54,6 +54,13 @@ class SimRunner:
         t_star: int | None = None,
         beta: float = 1.0,
         mobility_mode: str = "random_walk",
+        # aggregation params
+        agg_d_min: float = 0.3,
+        agg_R_personal: float = 0.5,
+        agg_W_attract: float = 1.0,
+        agg_W_repel: float = 2.0,
+        agg_noise: float = 0.05,
+        # flocking params
         R_sep: float = 1.0,
         R_ali: float = 3.0,
         R_coh: float = 5.0,
@@ -85,6 +92,11 @@ class SimRunner:
         self.t_star         = t_star
         self.beta           = beta
         self.mobility_mode  = mobility_mode
+        self.agg_d_min      = agg_d_min
+        self.agg_R_personal = agg_R_personal
+        self.agg_W_attract  = agg_W_attract
+        self.agg_W_repel    = agg_W_repel
+        self.agg_noise      = agg_noise
         self.R_sep          = R_sep
         self.R_ali          = R_ali
         self.R_coh          = R_coh
@@ -151,7 +163,12 @@ class SimRunner:
             if self.mobility_mode == "random_walk":
                 positions = arena.random_walk_step(positions, self.step_size)
             elif self.mobility_mode == "aggregation":
-                positions = arena.aggregation_step(positions, k_i, G, self.step_size)
+                positions = arena.aggregation_step(
+                    positions, self.step_size,
+                    d_min=self.agg_d_min, R_personal=self.agg_R_personal,
+                    W_attract=self.agg_W_attract, W_repel=self.agg_W_repel,
+                    noise=self.agg_noise,
+                )
             elif self.mobility_mode == "flocking":
                 positions, velocities = arena.flocking_step(
                     positions, velocities, self.step_size,

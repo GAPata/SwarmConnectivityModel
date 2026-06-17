@@ -25,9 +25,16 @@ CONFIGS = {
         mobility_mode="random_walk", t_star=100,
     ),
 
-    # Aggregation: robots drift toward their neighbours' centre of mass.
+    # Aggregation: global 1/d² attraction + short-range repulsion (no RGG needed).
+    # Tune agg_R_personal/agg_W_repel to control cluster compactness.
     "aggregation": dict(
         **BASE, R=2.4, init_mode="uniform", mobility_mode="aggregation",
+    ),
+
+    # Aggregation with stronger repulsion — looser cluster.
+    "aggregation_loose": dict(
+        **BASE, R=2.4, init_mode="uniform", mobility_mode="aggregation",
+        agg_R_personal=1.5, agg_W_repel=4.0,
     ),
 
     # Flocking with the library defaults (looser group, more noise).

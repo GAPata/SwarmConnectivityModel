@@ -17,7 +17,7 @@ class Experiment:
 
     Output
     ------
-    results/{exp_name}/run_{i:03d}.csv   — summary CSV for each run.
+    results/{mobility_mode}/{exp_name}/run_{i:03d}.csv   — summary CSV for each run.
     """
 
     def __init__(
@@ -31,10 +31,11 @@ class Experiment:
         self.runner_kwargs = dict(runner_kwargs, snapshot_every=0)  # always off during experiments
 
     def run(self) -> None:
-        out_dir = Path("results") / self.exp_name
+        mobility_mode = self.runner_kwargs["mobility_mode"]
+        out_dir = Path("results") / mobility_mode / self.exp_name
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"[{self.exp_name}] Starting {self.n_runs} runs …")
+        print(f"[{mobility_mode}/{self.exp_name}] Starting {self.n_runs} runs …")
 
         for i in range(self.n_runs):
             runner = SimRunner(seed=i, **self.runner_kwargs)
@@ -43,4 +44,4 @@ class Experiment:
             logger.save(str(csv_path), summary=True)
             print(f"  run {i+1:>{len(str(self.n_runs))}}/{self.n_runs}  →  {csv_path}")
 
-        print(f"[{self.exp_name}] Done. Results in results/{self.exp_name}/")
+        print(f"[{mobility_mode}/{self.exp_name}] Done. Results in {out_dir}/")

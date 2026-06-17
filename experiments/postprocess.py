@@ -8,25 +8,26 @@ import numpy as np
 import pandas as pd
 
 
-def aggregate_experiment(exp_name: str) -> None:
+def aggregate_experiment(mobility_mode: str, exp_name: str) -> None:
     """Aggregate all run CSVs for an experiment and produce summary plots.
 
-    Reads:   results/{exp_name}/run_*.csv
+    Reads:   results/{mobility_mode}/{exp_name}/run_*.csv
     Writes:
-      results/{exp_name}/aggregate.csv
-      results/{exp_name}/SI_curve_aggregated.png
-      results/{exp_name}/chi_tracking_aggregated.png
+      results/{mobility_mode}/{exp_name}/aggregate.csv
+      results/{mobility_mode}/{exp_name}/SI_curve_aggregated.png
+      results/{mobility_mode}/{exp_name}/chi_tracking_aggregated.png
 
     Parameters
     ----------
-    exp_name : experiment label matching the folder name under results/.
+    mobility_mode : 'random_walk', 'aggregation' or 'flocking'.
+    exp_name      : experiment label matching the sub-folder name.
     """
-    out_dir = Path("results") / exp_name
+    out_dir = Path("results") / mobility_mode / exp_name
     csv_files = sorted(out_dir.glob("run_*.csv"))
     if not csv_files:
         raise FileNotFoundError(f"No run CSVs found in '{out_dir}'")
 
-    print(f"[{exp_name}] Loading {len(csv_files)} runs …")
+    print(f"[{mobility_mode}/{exp_name}] Loading {len(csv_files)} runs …")
     frames = [pd.read_csv(f) for f in csv_files]
     # Stack into (n_runs, T) structure via a single tall DataFrame
     all_runs = pd.concat(frames, keys=range(len(frames)), names=["run", "row"])
@@ -123,11 +124,11 @@ def aggregate_experiment(exp_name: str) -> None:
     plt.close(fig)
     print(f"  χ tracking plot → {chi_path}")
 
-    print(f"[{exp_name}] Done.")
+    print(f"[{mobility_mode}/{exp_name}] Done.")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python postprocess.py <exp_name>")
+    if len(sys.argv) != 3:
+        print("Usage: python postprocess.py <mobility_mode> <exp_name>")
         sys.exit(1)
-    aggregate_experiment(sys.argv[1])
+    aggregate_experiment(sys.argv[1], sys.argv[2])
